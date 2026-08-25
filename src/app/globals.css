@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -8px rgba(0,0,0,0.5);
+
+  /* Register as theme colors so bg-surface, text-ink, etc. still work */
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-border: var(--surface-border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+}
+
+:root,
+.dark {
+  --surface: #0B0E14;
+  --surface-raised: #12161F;
+  --surface-border: #232837;
+  --ink: #E6E8EC;
+  --ink-muted: #8B93A7;
+  --ink-faint: #5B6272;
+  --accent: #6C5CE7;
+  --accent-hover: #7D6EF0;
+  --accent-muted: #6C5CE71A;
+  --status-success: #2ECC71;
+  --status-warning: #F5B942;
+  --status-danger: #EF5A5A;
+  --status-info: #4EA1F3;
+}
+
+.light {
+  --surface: #F7F8FA;
+  --surface-raised: #FFFFFF;
+  --surface-border: #E4E7EC;
+  --ink: #14181F;
+  --ink-muted: #5B6272;
+  --ink-faint: #9AA2B5;
+  --accent: #6C5CE7;
+  --accent-hover: #5A4BD1;
+  --accent-muted: #6C5CE714;
+  --status-success: #1E9E56;
+  --status-warning: #B87A0A;
+  --status-danger: #D93B3B;
+  --status-info: #2E7FD6;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
