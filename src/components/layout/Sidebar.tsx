@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderKanban, CheckSquare, Settings, X } from "lucide-react";
+import { LayoutDashboard, FolderKanban, CheckSquare, Settings, X, ChartLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Projects", icon: FolderKanban, href: "/projects" },
   { label: "Tasks", icon: CheckSquare, href: "/tasks" },
   { label: "Settings", icon: Settings, href: "/settings" },
+  { label: "Analytics", icon: ChartLine, href: "/analytics" },
 ];
 
 interface SidebarProps {
@@ -40,7 +41,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         aria-label="Primary navigation"
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-surface-border">
-          <span className="font-semibold text-ink">DevBoard</span>
+          <span className="font-semibold text-ink">Loopboard</span>
           <button
             onClick={onClose}
             className="md:hidden text-ink-muted hover:text-ink p-1 -m-1"

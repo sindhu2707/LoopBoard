@@ -1,6 +1,7 @@
 export type TaskStatus = "todo" | "in-progress" | "review" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 export type ProjectStatus = "on-track" | "at-risk" | "delayed" | "completed";
+export type ActivityAction = "created" | "status-changed" | "commented" | "completed";
 
 export interface User {
   id: string;
@@ -36,4 +37,32 @@ export interface DashboardStats {
   tasksCompletedThisWeek: number;
   tasksOverdue: number;
   teamMembers: number;
+}
+
+export interface ActivityEvent {
+  id: string;
+  actor: string;
+  action: ActivityAction;
+  target: string;
+  detail?: string;
+  timestamp: string;
+}
+
+export interface StatusBreakdown {
+  status: TaskStatus;
+  count: number;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  read: boolean;
+  timestamp: string;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
 }

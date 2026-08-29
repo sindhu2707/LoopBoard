@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Loopboard — Developer Productivity Dashboard
+
+A modern, fully interactive developer productivity dashboard built with Next.js App Router and TypeScript. Loopboard brings together project tracking, task management, team visibility, and analytics in one clean, theme-aware interface — backed by a realistic mock data layer that simulates loading states, errors, and network delay.
+
+**[Live Demo](#) · [Video Walkthrough](#)**
+
+---
+
+## Features
+
+### Dashboard
+- At-a-glance stats (active projects, tasks completed this week, overdue tasks, team size) with click-through drill-down navigation
+- Project overview cards with progress bars, avatar stacks, and status badges
+- Debounced search + status filtering across projects, with filter state persisted in the URL
+- Recent tasks list and a live Activity Feed showing real actions (status changes, task creation, reassignment) as they happen
+
+### Tasks
+- **List view** — search by title/assignee, filter by priority, sort by due date/priority/title
+- **Board view** — full drag-and-drop Kanban board (To Do → In Progress → In Review → Done) with optimistic updates and automatic rollback on failure
+- **Bulk actions** — multi-select tasks and apply a status change to all of them at once
+- **Full CRUD** — create, edit, and delete tasks directly from the list or board, including reassigning the owner
+- Deep-linkable filtered views (`?status=done`, `?overdue=true`) driven from the dashboard stat cards
+
+### Projects
+- Project list with live progress, task counts, and due dates
+- **Project detail page** per project — full overview, progress, due date, and:
+  - Team members with their roles (cross-referenced from the team directory)
+  - Project-scoped task list with the same add/edit/delete/reassign flow as the global Tasks page
+  - Task counts recalculate automatically as tasks are added, completed, or removed
+
+### Team
+- Directory of team members with roles and avatars
+
+### Analytics
+- Task status breakdown (donut chart)
+- Project progress comparison (bar chart)
+
+### Productivity tools
+- **Command palette (⌘K / Ctrl+K)** — fuzzy-search and jump to any project, task, or team member from anywhere in the app
+- **Notifications dropdown** — unread indicator, mark-as-read, relative timestamps
+
+### Settings
+- **Profile** — update your name and role
+- **Appearance** — light / dark / system theme, persisted across the app
+- **Notification preferences** — toggle which events you get notified about
+- **Developer controls** — force simulated errors or override network delay app-wide, useful for demoing loading/error states on any screen
+
+### Polish
+- Fully responsive (375 / 768 / 1280px breakpoints), keyboard accessible, focus-visible states throughout
+- Loading skeletons, empty states, and error banners with retry — for every data-driven view
+- Light/dark theme toggle with no flash-of-unstyled-content on load
+- A dedicated landing page ("Get Started") in front of the dashboard
+
+---
+
+## Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 (`@theme` design tokens) |
+| Icons | lucide-react |
+| Theming | next-themes |
+| Drag & drop | @dnd-kit/core |
+| Charts | Recharts |
+| Data layer | In-memory mock data with simulated latency & error injection |
+
+No backend or database — all data lives in `lib/mock-data.ts` and resets on a full reload. This keeps the project easy to run, demo, and extend without any setup.
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+git clone <repo-url>
+cd dev-productivity-dashboard
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) — you'll land on the "Get Started" screen; click through to reach the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev          # start the dev server
+npm run build         # production build
+npm run lint          # eslint
+npx tsc --noEmit       # type-check without emitting
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/
+    page.tsx                    # landing page ("Get Started")
+    dashboard/page.tsx          # main dashboard
+    projects/
+      page.tsx                  # project list (searchable/filterable)
+      [id]/page.tsx             # project detail (overview, team, tasks CRUD)
+    tasks/page.tsx               # task list + Kanban board, search/sort/filter, bulk actions
+    team/page.tsx                 # team directory
+    analytics/page.tsx            # charts
+    settings/page.tsx             # profile, appearance, notifications, dev controls
+    layout.tsx, globals.css
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  components/
+    layout/     — Navbar, Sidebar, AppShell, ProfileMenu, ThemeProvider,
+                  ThemeToggle, NotificationsDropdown, CommandPalette
+    ui/         — Card, Badge, ProgressBar, Avatar (+ AvatarStack), Skeleton, EmptyState
+    dashboard/  — StatsRow, ProjectCard, TaskCard, KanbanBoard, ActivityFeed,
+                  AnalyticsCharts, TaskFormModal, SearchFilterBar (+ skeleton variants)
 
-## Deploy on Vercel
+  lib/
+    mock-data.ts        # simulated async data layer (fetch + create/update/delete)
+    utils.ts             # cn() class-merging helper
+    hooks/useDebounce.ts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+  types/index.ts          # Task, Project, User, TeamMember, ActivityEvent, etc.
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Design Notes
+
+- **Tailwind v4** uses `@theme` in `globals.css` instead of `tailwind.config.ts`, with semantic tokens (`surface`, `ink`, `accent`, `status-*`) that adapt between light and dark mode.
+- **Mock data layer** mimics a real API: every fetch takes a configurable delay and can simulate failure via `simulateError`, letting every screen's loading/empty/error states be tested deliberately — including a global override in Settings → Developer Controls.
+- **Optimistic UI**: drag-and-drop and bulk actions update the screen immediately and roll back automatically if the simulated request fails.
+
+---
+
+## License
+
+MIT

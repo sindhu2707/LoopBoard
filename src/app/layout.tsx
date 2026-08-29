@@ -3,11 +3,12 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { CommandPalette } from "@/components/layout/CommandPalette";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "DevBoard — Developer Productivity Dashboard",
+  title: "Loopboard — Developer Productivity Dashboard",
   description: "Track projects, tasks, and progress in one place.",
 };
 
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <AppShell>{children}</AppShell>
+          <CommandPalette />
         </ThemeProvider>
       </body>
     </html>

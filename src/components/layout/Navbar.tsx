@@ -4,6 +4,7 @@ import { Menu, Search, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationsDropdown } from "./NotificationsDropdown";
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -35,15 +36,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             "focus:outline-none focus:ring-2 focus:ring-accent"
           )}
         />
-      </div>
+      </div>     
 
-      <button
-        className="relative text-ink-muted hover:text-ink"
-        aria-label="Notifications"
-      >
-        <Bell size={20} />
-        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-status-danger" />
-      </button>     
+      <NotificationsDropdown />
 
       <ThemeToggle />
         <button className="relative text-ink-muted hover:text-ink" aria-label="Notifications"></button>

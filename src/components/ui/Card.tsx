@@ -15,7 +15,7 @@ export function Card({ className, hoverable, asButton, ...props }: CardProps) {
         hoverable && "transition-colors hover:border-accent/50 cursor-pointer focus-visible:border-accent",
         className
       )}
-      {...(props as any)}
+      {...(props as HTMLAttributes<HTMLElement>)}
     />
   );
 }
