@@ -2,7 +2,7 @@
 
 A modern, fully interactive developer productivity dashboard built with Next.js App Router and TypeScript. Loopboard brings together project tracking, task management, team visibility, and analytics in one clean, theme-aware interface — backed by a realistic mock data layer that simulates loading states, errors, and network delay.
 
-**[Live Demo](#) · [Video Walkthrough](#)**
+**[Live Demo](#https://loop-board-six.vercel.app/) · [Video Walkthrough](#https://drive.google.com/file/d/1qp_M-4iFi8FCSSAfOYvDn7ZBFUlytaLc/view?usp=sharing)**
 
 ---
 
