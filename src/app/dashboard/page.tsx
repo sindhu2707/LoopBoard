@@ -83,7 +83,7 @@ function DashboardContent() {
     } else {
       params.delete("q");
     }
-    router.replace(`/?${params.toString()}`, { scroll: false });
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }
 
   function updateStatusFilter(value: ProjectStatus | "all") {
@@ -94,7 +94,7 @@ function DashboardContent() {
     } else {
       params.set("status", value);
     }
-    router.replace(`/?${params.toString()}`, { scroll: false });
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }
 
   const debouncedQuery = useDebounce(query, 300);

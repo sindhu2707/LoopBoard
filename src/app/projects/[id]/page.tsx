@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Project, Task } from "@/types";
+import { Project, Task, TeamMember } from "@/types";
 import {
   fetchProjectById,
   fetchProjectTasks,
@@ -10,7 +10,6 @@ import {
   createTask,
   updateTask,
   deleteTask,
-  TeamMember,
 } from "@/lib/mock-data";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -22,6 +21,7 @@ import { TaskCard } from "@/components/dashboard/TaskCard";
 import { TaskCardSkeleton } from "@/components/dashboard/TaskCardSkeleton";
 import { TaskFormModal, TaskFormValues } from "@/components/dashboard/TaskFormModal";
 import { ArrowLeft, CalendarDays, ListChecks, FolderX, Plus } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const STATUS_CONFIG: Record<Project["status"], { label: string; badge: "success" | "warning" | "danger" | "info"; bar: "success" | "warning" | "danger" | "info" }> = {
   "on-track": { label: "On Track", badge: "success", bar: "success" },
@@ -44,54 +44,7 @@ export default function ProjectDetailPage() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [savingTask, setSavingTask] = useState(false);
-
-  function openCreateModal() {
-  setEditingTask(null);
-  setTaskModalOpen(true);
-}
-
-function openEditModal(task: Task) {
-  setEditingTask(task);
-  setTaskModalOpen(true);
-}
-
-async function handleTaskSubmit(values: TaskFormValues) {
-  if (!project) return;
-  setSavingTask(true);
-  try {
-    if (editingTask) {
-      const updated = await updateTask(editingTask.id, values);
-      setTasks((prev) => prev?.map((t) => (t.id === updated.id ? updated : t)) ?? null);
-    } else {
-      const created = await createTask({ ...values, projectId: project.id });
-      setTasks((prev) => (prev ? [...prev, created] : [created]));
-    }
-    const refreshed = await fetchProjectById(project.id);
-    setProject(refreshed);
-    setTaskModalOpen(false);
-  } catch (err) {
-    alert(err instanceof Error ? err.message : "Something went wrong");
-  } finally {
-    setSavingTask(false);
-  }
-}
-
-async function handleDeleteTask(taskId: string) {
-  if (!project) return;
-  if (!confirm("Delete this task? This can't be undone.")) return;
-
-  const previousTasks = tasks;
-  setTasks((prev) => prev?.filter((t) => t.id !== taskId) ?? null);
-
-  try {
-    await deleteTask(taskId);
-    const refreshed = await fetchProjectById(project.id);
-    setProject(refreshed);
-  } catch (err) {
-    setTasks(previousTasks);
-    alert(err instanceof Error ? err.message : "Failed to delete task");
-  }
-}
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchProjectById(params.id).then(setProject);
@@ -103,6 +56,59 @@ async function handleDeleteTask(taskId: string) {
       fetchProjectMembers(project.members).then(setMembers);
     }
   }, [project]);
+
+  function openCreateModal() {
+    setEditingTask(null);
+    setTaskModalOpen(true);
+  }
+
+  function openEditModal(task: Task) {
+    setEditingTask(task);
+    setTaskModalOpen(true);
+  }
+
+  async function handleTaskSubmit(values: TaskFormValues) {
+    if (!project) return;
+    setSavingTask(true);
+    try {
+      if (editingTask) {
+        const updated = await updateTask(editingTask.id, values);
+        setTasks((prev) => prev?.map((item) => (item.id === updated.id ? updated : item)) ?? null);
+      } else {
+        const created = await createTask({ ...values, projectId: project.id });
+        setTasks((prev) => (prev ? [...prev, created] : [created]));
+      }
+      const refreshed = await fetchProjectById(project.id);
+      setProject(refreshed);
+      setTaskModalOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSavingTask(false);
+    }
+  }
+
+  function requestDeleteTask(task: Task) {
+    setTaskToDelete(task);
+  }
+
+  async function confirmDeleteTask() {
+    if (!project || !taskToDelete) return;
+
+    const taskId = taskToDelete.id;
+    const previousTasks = tasks;
+    setTasks((prev) => prev?.filter((item) => item.id !== taskId) ?? null);
+    setTaskToDelete(null);
+
+    try {
+      await deleteTask(taskId);
+      const refreshed = await fetchProjectById(project.id);
+      setProject(refreshed);
+    } catch (err) {
+      setTasks(previousTasks);
+      alert(err instanceof Error ? err.message : "Failed to delete task");
+    }
+  }
 
   if (project === undefined) {
     return (
@@ -192,43 +198,43 @@ async function handleDeleteTask(taskId: string) {
       {/* PROJECT TASKS */}
       <section>
         <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-ink">Tasks</h2>
-            <button
+          <h2 className="text-sm font-semibold text-ink">Tasks</h2>
+          <button
             type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer"
-            >
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+          >
             <Plus className="w-3.5 h-3.5" />
             Add Task
-            </button>
+          </button>
         </div>
         {tasks === null ? (
-            <div className="space-y-2">
+          <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-                <TaskCardSkeleton key={i} />
+              <TaskCardSkeleton key={i} />
             ))}
-            </div>
+          </div>
         ) : tasks.length > 0 ? (
-            <div className="space-y-2">
+          <div className="space-y-2">
             {tasks.map((t) => (
-                <TaskCard
+              <TaskCard
                 key={t.id}
                 task={t}
                 onEdit={() => openEditModal(t)}
-                onDelete={() => handleDeleteTask(t.id)}
-                />
+                onDelete={() => requestDeleteTask(t)}
+              />
             ))}
-            </div>
+          </div>
         ) : (
-            <EmptyState
+          <EmptyState
             icon={ListChecks}
             title="No tasks yet"
             description="This project has no tasks assigned."
-            />
+          />
         )}
-        </section>
+      </section>
 
-        <TaskFormModal
+      <TaskFormModal
         key={taskModalOpen ? (editingTask?.id ?? "new") : "closed"}
         open={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
@@ -236,7 +242,15 @@ async function handleDeleteTask(taskId: string) {
         members={members ?? []}
         initialTask={editingTask}
         submitting={savingTask}
-        />
+      />
+
+      <ConfirmDialog
+        open={!!taskToDelete}
+        title="Delete task?"
+        message="Delete this task? This can't be undone."
+        onConfirm={confirmDeleteTask}
+        onCancel={() => setTaskToDelete(null)}
+      />
     </div>
   );
 }

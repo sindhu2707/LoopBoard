@@ -1,138 +1,451 @@
-# Loopboard — Developer Productivity Dashboard
+LoopBoard — Developer Productivity Dashboard
 
-A modern, fully interactive developer productivity dashboard built with Next.js App Router and TypeScript. Loopboard brings together project tracking, task management, team visibility, and analytics in one clean, theme-aware interface — backed by a realistic mock data layer that simulates loading states, errors, and network delay.
+A modern, fully interactive developer productivity dashboard built with Next.js App Router and TypeScript. LoopBoard brings project tracking, task management, team visibility, and analytics together in one clean, responsive, theme-aware interface.
 
-**[Live Demo](https://loop-board-six.vercel.app/) · [Video Walkthrough](https://drive.google.com/file/d/1qp_M-4iFi8FCSSAfOYvDn7ZBFUlytaLc/view?usp=sharing)**
+The application includes a realistic data layer with loading states, simulated network latency, error injection, optimistic updates, and a companion Express REST API for full-stack usage.
 
----
+Live Demo · Backend Documentation
 
-## Features
+Features
+Dashboard
+At-a-glance statistics for:
+Active projects
+Tasks completed this week
+Overdue tasks
+Team size
+Click-through stat cards with deep-linkable filtered views
+Project overview cards with:
+Progress bars
+Avatar stacks
+Status badges
+Task counts
+Due dates
+Debounced project search
+Status filtering with filter state persisted in the URL
+Recent tasks
+Live activity feed showing actions such as:
+Task creation
+Status changes
+Task reassignment
+Tasks
+List View
+Search tasks by title or assignee
+Filter by priority
+Sort by:
+Due date
+Priority
+Title
+Multi-select tasks
+Bulk status updates
+Create, edit, delete, and reassign tasks
+Kanban Board
+Drag-and-drop workflow using @dnd-kit/core
+Columns:
+To Do
+In Progress
+In Review
+Done
+Optimistic UI updates
+Automatic rollback when an update fails
+Task CRUD directly from the board
+Deep Linking
 
-### Dashboard
-- At-a-glance stats (active projects, tasks completed this week, overdue tasks, team size) with click-through drill-down navigation
-- Project overview cards with progress bars, avatar stacks, and status badges
-- Debounced search + status filtering across projects, with filter state persisted in the URL
-- Recent tasks list and a live Activity Feed showing real actions (status changes, task creation, reassignment) as they happen
+Filtered task views can be opened directly through URL parameters:
 
-### Tasks
-- **List view** — search by title/assignee, filter by priority, sort by due date/priority/title
-- **Board view** — full drag-and-drop Kanban board (To Do → In Progress → In Review → Done) with optimistic updates and automatic rollback on failure
-- **Bulk actions** — multi-select tasks and apply a status change to all of them at once
-- **Full CRUD** — create, edit, and delete tasks directly from the list or board, including reassigning the owner
-- Deep-linkable filtered views (`?status=done`, `?overdue=true`) driven from the dashboard stat cards
+/tasks?status=done
+/tasks?overdue=true
 
-### Projects
-- Project list with live progress, task counts, and due dates
-- **Project detail page** per project — full overview, progress, due date, and:
-  - Team members with their roles (cross-referenced from the team directory)
-  - Project-scoped task list with the same add/edit/delete/reassign flow as the global Tasks page
-  - Task counts recalculate automatically as tasks are added, completed, or removed
 
-### Team
-- Directory of team members with roles and avatars
+Dashboard actions can therefore take users directly to the relevant task view.
 
-### Analytics
-- Task status breakdown (donut chart)
-- Project progress comparison (bar chart)
+Projects
+Project List
+Searchable project directory
+Project status filtering
+Live progress indicators
+Task counts
+Due dates
+Team member avatars
+Project Details
 
-### Productivity tools
-- **Command palette (⌘K / Ctrl+K)** — fuzzy-search and jump to any project, task, or team member from anywhere in the app
-- **Notifications dropdown** — unread indicator, mark-as-read, relative timestamps
+Each project has its own detail page containing:
 
-### Settings
-- **Profile** — update your name and role
-- **Appearance** — light / dark / system theme, persisted across the app
-- **Notification preferences** — toggle which events you get notified about
-- **Developer controls** — force simulated errors or override network delay app-wide, useful for demoing loading/error states on any screen
+Project overview
+Progress
+Due date
+Team members and roles
+Project-scoped task management
+Add, edit, delete, and reassign tasks
+Automatically recalculated task counts
 
-### Polish
-- Fully responsive (375 / 768 / 1280px breakpoints), keyboard accessible, focus-visible states throughout
-- Loading skeletons, empty states, and error banners with retry — for every data-driven view
-- Light/dark theme toggle with no flash-of-unstyled-content on load
-- A dedicated landing page ("Get Started") in front of the dashboard
+Project members are cross-referenced with the main team directory.
 
----
+Team
 
-## Tech Stack
+A centralized team directory displaying:
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS v4 (`@theme` design tokens) |
-| Icons | lucide-react |
-| Theming | next-themes |
-| Drag & drop | @dnd-kit/core |
-| Charts | Recharts |
-| Data layer | In-memory mock data with simulated latency & error injection |
+Team members
+Roles
+Avatars
+Project participation
+Analytics
 
-No backend or database — all data lives in `lib/mock-data.ts` and resets on a full reload. This keeps the project easy to run, demo, and extend without any setup.
+LoopBoard includes visual analytics powered by Recharts:
 
----
+Task status breakdown using a donut chart
+Project progress comparison using a bar chart
 
-## Getting Started
+These provide a quick overview of project health and task distribution.
 
-```bash
+Productivity Tools
+Command Palette
+
+Press:
+
+Ctrl + K
+
+
+or:
+
+⌘ + K
+
+
+to open the global command palette.
+
+The command palette allows users to search and navigate across:
+
+Projects
+Tasks
+Team members
+
+It also supports:
+
+Keyboard navigation
+Arrow-key selection
+Enter to navigate
+Escape to close
+Search filtering
+Mouse selection
+Notifications
+
+The notification dropdown includes:
+
+Unread indicator
+Notification list
+Relative timestamps
+Mark-as-read functionality
+Settings
+Profile
+
+Update:
+
+Name
+Role
+Appearance
+
+Choose between:
+
+Light
+Dark
+System
+
+Theme preferences are persisted across the application.
+
+Notifications
+
+Control which application events generate notifications.
+
+Developer Controls
+
+Developer/demo controls allow you to:
+
+Force simulated API errors
+Override network delay
+Test loading states
+Test error states
+Test retry behavior
+
+This makes it easy to demonstrate how the application behaves under different network conditions.
+
+UX & Polish
+
+LoopBoard is designed to behave like a production application rather than a static dashboard.
+
+Responsive layouts for mobile, tablet, and desktop
+Keyboard-accessible interactions
+Focus-visible states
+Loading skeletons
+Empty states
+Error banners with retry actions
+Optimistic UI updates
+Error rollback
+Debounced search
+URL-persisted filters
+Light/dark theme support
+No flash of unstyled content during theme initialization
+Dedicated landing page before entering the dashboard
+Tech Stack
+Layer	Technology
+Framework	Next.js App Router
+Language	TypeScript
+Styling	Tailwind CSS v4
+Design System	Tailwind @theme design tokens
+Icons	lucide-react
+Theming	next-themes
+Drag & Drop	@dnd-kit/core
+Charts	Recharts
+Frontend Data Layer	In-memory mock data
+Backend	Express REST API
+Shared Types	TypeScript types shared between frontend and backend
+Architecture
+
+LoopBoard supports two data modes.
+
+Local Development / Demo Mode
+
+When no backend API is configured, the application uses the local mock data layer:
+
+lib/mock-data.ts
+
+
+The mock layer simulates:
+
+Network latency
+Loading states
+API failures
+Create operations
+Update operations
+Delete operations
+
+This allows the frontend to be developed and demonstrated without requiring a database or backend server.
+
+Full-Stack Mode
+
+The repository also contains a companion Express REST API:
+
+server/
+
+
+The backend provides API endpoints for:
+
+Users
+Projects
+Tasks
+
+It includes CRUD operations, validation, and centralized error handling.
+
+For backend setup and API documentation, see:
+
+server/README.md
+
+Getting Started
+Prerequisites
+Node.js
+npm
+Installation
 git clone <repo-url>
-cd dev-productivity-dashboard
+cd LoopBoard
 npm install
+
+Start the Development Server
 npm run dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll land on the "Get Started" screen; click through to reach the dashboard.
 
-### Scripts
+Open:
 
-```bash
-npm run dev          # start the dev server
-npm run build         # production build
-npm run lint          # eslint
-npx tsc --noEmit       # type-check without emitting
-```
+http://localhost:3000
 
----
 
-## Project Structure
+You'll first see the Get Started landing page. Continue through it to enter the dashboard.
 
-```
-src/
-  app/
-    page.tsx                    # landing page ("Get Started")
-    dashboard/page.tsx          # main dashboard
-    projects/
-      page.tsx                  # project list (searchable/filterable)
-      [id]/page.tsx             # project detail (overview, team, tasks CRUD)
-    tasks/page.tsx               # task list + Kanban board, search/sort/filter, bulk actions
-    team/page.tsx                 # team directory
-    analytics/page.tsx            # charts
-    settings/page.tsx             # profile, appearance, notifications, dev controls
-    layout.tsx, globals.css
+Connecting the Backend
 
-  components/
-    layout/     — Navbar, Sidebar, AppShell, ProfileMenu, ThemeProvider,
-                  ThemeToggle, NotificationsDropdown, CommandPalette
-    ui/         — Card, Badge, ProgressBar, Avatar (+ AvatarStack), Skeleton, EmptyState
-    dashboard/  — StatsRow, ProjectCard, TaskCard, KanbanBoard, ActivityFeed,
-                  AnalyticsCharts, TaskFormModal, SearchFilterBar (+ skeleton variants)
+The frontend can run using local mock data by default.
 
-  lib/
-    mock-data.ts        # simulated async data layer (fetch + create/update/delete)
-    utils.ts             # cn() class-merging helper
-    hooks/useDebounce.ts
+To connect it to the Express API, first follow the backend setup instructions in:
 
-  types/index.ts          # Task, Project, User, TeamMember, ActivityEvent, etc.
-```
+server/README.md
 
----
 
-## Design Notes
+Then create:
 
-- **Tailwind v4** uses `@theme` in `globals.css` instead of `tailwind.config.ts`, with semantic tokens (`surface`, `ink`, `accent`, `status-*`) that adapt between light and dark mode.
-- **Mock data layer** mimics a real API: every fetch takes a configurable delay and can simulate failure via `simulateError`, letting every screen's loading/empty/error states be tested deliberately — including a global override in Settings → Developer Controls.
-- **Optimistic UI**: drag-and-drop and bulk actions update the screen immediately and roll back automatically if the simulated request fails.
+.env.local
 
----
 
-## License
+at the project root and configure:
+
+NEXT_PUBLIC_API_URL=<your-backend-url>
+
+Available Scripts
+npm run dev
+
+
+Start the development server.
+
+npm run build
+
+
+Create a production build.
+
+npm run lint
+
+
+Run ESLint.
+
+npx tsc --noEmit
+
+
+Run TypeScript type checking without emitting files.
+
+Project Structure
+LoopBoard/
+│
+├── src/
+│   ├── app/
+│   │   ├── page.tsx
+│   │   ├── dashboard/
+│   │   │   └── page.tsx
+│   │   ├── projects/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/
+│   │   │       └── page.tsx
+│   │   ├── tasks/
+│   │   │   └── page.tsx
+│   │   ├── team/
+│   │   │   └── page.tsx
+│   │   ├── analytics/
+│   │   │   └── page.tsx
+│   │   ├── settings/
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   └── globals.css
+│   │
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── Navbar
+│   │   │   ├── Sidebar
+│   │   │   ├── AppShell
+│   │   │   ├── ProfileMenu
+│   │   │   ├── ThemeProvider
+│   │   │   ├── ThemeToggle
+│   │   │   ├── NotificationsDropdown
+│   │   │   └── CommandPalette
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── Card
+│   │   │   ├── Badge
+│   │   │   ├── ProgressBar
+│   │   │   ├── Avatar
+│   │   │   ├── AvatarStack
+│   │   │   ├── Skeleton
+│   │   │   ├── EmptyState
+│   │   │   └── ConfirmDialog
+│   │   │
+│   │   └── dashboard/
+│   │       ├── StatsRow
+│   │       ├── ProjectCard
+│   │       ├── TaskCard
+│   │       ├── KanbanBoard
+│   │       ├── ActivityFeed
+│   │       ├── AnalyticsCharts
+│   │       ├── TaskFormModal
+│   │       ├── ProjectFormModal
+│   │       └── SearchFilterBar
+│   │
+│   ├── lib/
+│   │   ├── mock-data.ts
+│   │   ├── utils.ts
+│   │   └── hooks/
+│   │       └── useDebounce.ts
+│   │
+│   └── types/
+│       └── index.ts
+│
+├── shared/
+│   └── types.ts
+│
+├── server/
+│   └── README.md
+│
+├── public/
+│   └── images/
+│
+└── package.json
+
+Design Notes
+Tailwind CSS v4
+
+LoopBoard uses Tailwind CSS v4 with semantic design tokens defined through @theme in globals.css.
+
+The design system includes tokens for concepts such as:
+
+surface
+surface-raised
+surface-border
+ink
+ink-muted
+accent
+status-*
+
+
+This allows the interface to adapt consistently between light and dark themes.
+
+Simulated Data Layer
+
+The local mock data layer behaves similarly to a real API instead of returning data synchronously.
+
+Requests can simulate:
+
+Delays
+Failures
+Successful mutations
+Loading states
+
+This allows every data-driven screen to demonstrate realistic UI states.
+
+Optimistic Updates
+
+Interactions such as Kanban drag-and-drop and bulk task updates use optimistic UI behavior.
+
+The interface updates immediately while the request is processed. If the request fails, the previous state is restored automatically.
+
+Screenshots
+Dashboard
+
+Projects Management
+
+Kanban Tasks Board
+
+Developer Settings & Themes
+
+Backend
+
+The repository includes a companion Express REST API located in:
+
+/server
+
+
+The backend provides the API layer for users, projects, and tasks.
+
+For:
+
+Backend installation
+Environment variables
+API endpoints
+Request/response examples
+Validation
+Error handling
+
+see the dedicated backend documentation:
+
+Backend README →
+
+Live Demo
+
+Open LoopBoard
+
+The live demo showcases the dashboard, project management, Kanban task board, analytics, team directory, command palette, notifications, settings, and responsive theme system.
+
+License
 
 MIT

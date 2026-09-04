@@ -1,4 +1,15 @@
-import { Project, Task, DashboardStats, User, TaskStatus, TaskPriority, ActivityEvent, NotificationItem } from "@/types";
+import {
+  Project,
+  Task,
+  DashboardStats,
+  User,
+  TaskStatus,
+  TaskPriority,
+  ActivityEvent,
+  NotificationItem,
+  ProjectStatus,
+  TeamMember
+} from "@/types";
 
 export const DEV_CONFIG: { simulateError: boolean; delayMs: number | null } = {
   simulateError: false,
@@ -13,6 +24,8 @@ export const CURRENT_USER: User = {
   id: "u1",
   name: "Sarah Patel",
   role: "Frontend Engineer",
+  email: "sarah@xyz.com",
+  password: "password123", // mock only — for demo change-password validation
 };
 
 const PROJECTS: Project[] = [
@@ -37,6 +50,41 @@ function recalcProjectCounts(projectId: string) {
   const projectTasks = TASKS.filter((t) => t.projectId === projectId);
   project.taskCount = projectTasks.length;
   project.completedTaskCount = projectTasks.filter((t) => t.status === "done").length;
+}
+
+let projectIdCounter = PROJECTS.length + 1;
+
+export interface CreateProjectInput {
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  members: string[];
+  dueDate: string;
+}
+
+export async function createProject(input: CreateProjectInput, opts: FetchOptions = {}): Promise<Project> {
+  await delay(opts.delayMs ?? 500);
+  if (opts.simulateError || DEV_CONFIG.simulateError) throw new Error("Failed to create project");
+
+  const project: Project = {
+    id: `p${projectIdCounter++}`,
+    ...input,
+    progress: 0,
+    taskCount: 0,
+    completedTaskCount: 0,
+  };
+  PROJECTS.push(project);
+
+  ACTIVITY.unshift({
+    id: `a${activityIdCounter++}`,
+    actor: CURRENT_USER.name,
+    action: "created",
+    target: project.name,
+    detail: "New project created",
+    timestamp: new Date().toISOString(),
+  });
+
+  return project;
 }
 
 export const NOTIFICATIONS: NotificationItem[] = [
@@ -85,7 +133,7 @@ export async function fetchProjectMembers(memberNames: string[], opts: FetchOpti
   if (opts.simulateError || DEV_CONFIG.simulateError) throw new Error("Failed to load project members");
   return memberNames.map((name) => {
     const match = TEAM_MEMBERS.find((m) => m.name === name);
-    return match ?? { id: name, name, role: "Contributor" };
+    return match ?? { id: name, name, role: "Contributor", email: "—" };
   });
 }
 
@@ -139,17 +187,11 @@ export async function fetchEmptyProjects(): Promise<Project[]> {
   return [];
 }
 
-export interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-}
-
 const TEAM_MEMBERS: TeamMember[] = [
-  { id: "m1", name: "Sarah Patel", role: "Frontend Engineer" },
-  { id: "m2", name: "Alex Kim", role: "Product Designer" },
-  { id: "m3", name: "Jo Chen", role: "Backend Engineer" },
-  { id: "m4", name: "Max Lee", role: "Full-stack Engineer" },
+  { id: "m1", name: "Sarah Patel", role: "Frontend Engineer", email: "sarah@xyz.com" },
+  { id: "m2", name: "Alex Kim", role: "Product Designer", email: "alex@xyz.com" },
+  { id: "m3", name: "Jo Chen", role: "Backend Engineer", email: "joe@xyz.com" },
+  { id: "m4", name: "Max Lee", role: "Full-stack Engineer", email: "max@xyz.com" },
 ];
 
 const ACTIVITY: ActivityEvent[] = [
@@ -313,4 +355,17 @@ export async function deleteTask(taskId: string, opts: FetchOptions = {}): Promi
 
   const [removed] = TASKS.splice(index, 1);
   recalcProjectCounts(removed.projectId);
+}
+
+export async function updatePassword(
+  currentPassword: string,
+  newPassword: string,
+  opts: FetchOptions = {}
+): Promise<void> {
+  await delay(opts.delayMs ?? 500);
+  if (opts.simulateError || DEV_CONFIG.simulateError) throw new Error("Failed to update password");
+  if (CURRENT_USER.password !== currentPassword) {
+    throw new Error("Current password is incorrect");
+  }
+  CURRENT_USER.password = newPassword;
 }

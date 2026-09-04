@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Task, TaskPriority, TaskStatus, Project } from "@/types";
+import { Task, TaskPriority, TaskStatus, Project, TeamMember } from "@/types";
 import {
   fetchTasks,
   fetchTeamMembers,
@@ -10,7 +10,6 @@ import {
   createTask,
   updateTask,
   deleteTask,
-  TeamMember,
 } from "@/lib/mock-data";
 import { TaskCard } from "@/components/dashboard/TaskCard";
 import { TaskCardSkeleton } from "@/components/dashboard/TaskCardSkeleton";
@@ -19,6 +18,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { TaskFormModal, TaskFormValues } from "@/components/dashboard/TaskFormModal";
 import { cn } from "@/lib/utils";
 import { ListChecks, List, LayoutGrid, Plus, Search } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function isOverdue(task: Task) {
   return new Date(task.dueDate) < new Date() && task.status !== "done";
@@ -49,6 +49,10 @@ function TasksContent() {
   const status = searchParams.get("status");
   const overdue = searchParams.get("overdue") === "true";
   const isFiltered = Boolean(status || overdue);
+
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
+
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchTasks().then(setTasks);
@@ -166,24 +170,50 @@ function TasksContent() {
     }
   }
 
-  async function handleDeleteTask(taskId: string) {
-    if (!confirm("Delete this task? This can't be undone.")) return;
-    const previous = tasks;
-    setTasks((prev) => prev?.filter((t) => t.id !== taskId) ?? null);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(taskId);
-      return next;
-    });
-    try {
-      await deleteTask(taskId);
-    } catch (err) {
-      setTasks(previous);
-      alert(err instanceof Error ? err.message : "Failed to delete task");
-    }
+  function requestDeleteTask(task: Task) {
+    setTaskPendingDelete(task);
   }
 
+    async function confirmDeleteTask() {
+      if (!taskPendingDelete) return;
+      const taskId = taskPendingDelete.id;
+      const previous = tasks;
+      setTasks((prev) => prev?.filter((t) => t.id !== taskId) ?? null);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+      setTaskPendingDelete(null);
+      try {
+        await deleteTask(taskId);
+      } catch (err) {
+        setTasks(previous);
+        alert(err instanceof Error ? err.message : "Failed to delete task");
+      }
+    }
+
   const showListControls = view === "list" || isFiltered;
+
+  async function confirmBulkDeleteTasks() {
+    if (selectedIds.size === 0) return;
+
+    const idsToDelete = Array.from(selectedIds);
+    const previous = tasks;
+
+    setTasks((prev) =>
+      prev?.filter((task) => !selectedIds.has(task.id)) ?? null
+    );
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+
+    try {
+      await Promise.all(idsToDelete.map((id) => deleteTask(id)));
+    } catch (err) {
+      setTasks(previous);
+      alert(err instanceof Error ? err.message : "Failed to delete tasks");
+    }
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -296,88 +326,121 @@ function TasksContent() {
           >
             Clear
           </button>
+          <button
+            type="button"
+            onClick={() => setBulkDeleteConfirm(true)}
+            className="text-sm text-ink-muted hover:text-ink cursor-pointer"
+          >
+            Delete
+          </button>
         </div>
       )}
 
-      {view === "board" && !isFiltered ? (
-        tasks === null ? (
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2 min-w-[280px] flex-1">
-                <TaskCardSkeleton />
-                <TaskCardSkeleton />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <KanbanBoard
-            key={`${searchInput}-${priorityFilter}`}
-            initialTasks={searchedAndFiltered ?? []}
-          />
-        )
-      ) : (
-        <div className="space-y-2">
-          {sorted === null ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => <TaskCardSkeleton key={i} />)}
-            </div>
-          ) : sorted.length > 0 ? (
-            <>
-              <label className="flex items-center gap-2 text-xs text-ink-muted px-1">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.size === sorted.length}
-                  onChange={toggleSelectAll}
-                  className="cursor-pointer"
-                />
-                Select all
-              </label>
-              {sorted.map((t) => (
-                <div key={t.id} className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(t.id)}
-                    onChange={() => toggleSelect(t.id)}
-                    className="cursor-pointer shrink-0"
-                  />
-                  <div className="flex-1">
-                    <TaskCard
-                      task={t}
-                      onEdit={() => openEditModal(t)}
-                      onDelete={() => handleDeleteTask(t.id)}
-                    />
-                  </div>
+        {view === "board" && !isFiltered ? (
+          tasks === null ? (
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2 min-w-[280px] flex-1">
+                  <TaskCardSkeleton />
                 </div>
               ))}
-            </>
+            </div>
           ) : (
-            <EmptyState
-              icon={ListChecks}
-              title="No tasks found"
-              description="Nothing matches this filter right now."
+            <KanbanBoard
+              key={`${searchInput}-${priorityFilter}`}
+              initialTasks={searchedAndFiltered ?? []}
             />
-          )}
-        </div>
-      )}
+          )
+        ) : (
+          <div className="space-y-2">
+            {sorted === null ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => <TaskCardSkeleton key={i} />)}
+              </div>
+            ) : sorted.length > 0 ? (
+              <>
+                <label className="flex items-center gap-2 text-xs text-ink-muted px-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === sorted.length}
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer"
+                  />
+                  Select all
+                </label>
+                {sorted.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(t.id)}
+                      onChange={() => toggleSelect(t.id)}
+                      className="cursor-pointer shrink-0"
+                    />
+                    <div className="flex-1">
+                      <TaskCard
+                        task={t}
+                        onEdit={() => openEditModal(t)}
+                        onDelete={() => requestDeleteTask(t)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <EmptyState
+                icon={ListChecks}
+                title="No tasks found"
+                description="Nothing matches this filter right now."
+              />
+            )}
+          </div>
+        )}
 
-      <TaskFormModal
-        key={taskModalOpen ? (editingTask?.id ?? "new") : "closed"}
-        open={taskModalOpen}
-        onClose={() => setTaskModalOpen(false)}
-        onSubmit={handleTaskSubmit}
-        members={members ?? []}
-        projects={projects ?? []}
-        initialTask={editingTask}
-        submitting={savingTask}
-      />
-    </div>
-  );
-}
+        <TaskFormModal
+          key={taskModalOpen ? (editingTask?.id ?? "new") : "closed"}
+          open={taskModalOpen}
+          onClose={() => setTaskModalOpen(false)}
+          onSubmit={handleTaskSubmit}
+          members={members ?? []}
+          projects={projects ?? []}
+          initialTask={editingTask}
+          submitting={savingTask}
+        />
+        {/* Single task delete */}
+        <ConfirmDialog
+          open={taskPendingDelete !== null}
+          title="Delete task?"
+          message={
+            taskPendingDelete
+              ? `"${taskPendingDelete.title}" will be permanently removed.`
+              : ""
+          }
+          confirmLabel="Yes, delete"
+          cancelLabel="No"
+          onConfirm={confirmDeleteTask}
+          onCancel={() => setTaskPendingDelete(null)}
+        />
 
-export default function TasksPage() {
-  return (
-    <Suspense fallback={null}>
-      <TasksContent />
-    </Suspense>
-  );
-}
+        {/* Bulk delete */}
+        <ConfirmDialog
+          open={bulkDeleteConfirm}
+          title="Delete selected tasks?"
+          message={`${selectedIds.size} selected task${
+            selectedIds.size === 1 ? "" : "s"
+          } will be permanently removed.`}
+          confirmLabel="Yes, delete"
+          cancelLabel="No"
+          onConfirm={confirmBulkDeleteTasks}
+          onCancel={() => setBulkDeleteConfirm(false)}
+        />
+      </div>
+    );
+  }
+
+  export default function TasksPage() {
+    return (
+      <Suspense fallback={null}>
+        <TasksContent />
+      </Suspense>
+    );
+  }

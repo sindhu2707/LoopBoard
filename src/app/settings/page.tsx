@@ -6,6 +6,7 @@ import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
   updateCurrentUser,
+  updatePassword,
   setDevConfig,
   CURRENT_USER,
   NotificationPreferences,
@@ -14,7 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
-import { User, Palette, Bell, Terminal, Check, Sun, Moon, Monitor } from "lucide-react";
+import { User, Palette, Bell, Terminal, Check, Sun, Moon, Monitor, KeyRound } from "lucide-react";
 
 function SavedBadge({ show }: { show: boolean }) {
   if (!show) return null;
@@ -29,6 +30,7 @@ function SavedBadge({ show }: { show: boolean }) {
 function ProfileSection() {
   const [name, setName] = useState(CURRENT_USER.name);
   const [role, setRole] = useState(CURRENT_USER.role);
+  const [email, setEmail] = useState(CURRENT_USER.email);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -36,7 +38,7 @@ function ProfileSection() {
     setSaving(true);
     setSaved(false);
     try {
-      await updateCurrentUser({ name, role });
+      await updateCurrentUser({ name, role, email });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -70,6 +72,24 @@ function ProfileSection() {
               className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
             />
           </div>
+          <div>
+            <label className="text-xs font-medium text-ink-muted block mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-ink-muted block mb-1">User ID</label>
+            <input
+              value={CURRENT_USER.id}
+              readOnly
+              disabled
+              className="w-full rounded-md border border-surface-border bg-surface-border/30 px-3 py-2 text-sm text-ink-muted cursor-not-allowed"
+            />
+          </div>
         </div>
       </div>
 
@@ -87,6 +107,104 @@ function ProfileSection() {
           {saving ? "Saving..." : "Save Profile"}
         </button>
       </div>
+    </Card>
+  );
+}
+
+function ChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation don't match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updatePassword(currentPassword, newPassword);
+      setSaved(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update password");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <KeyRound className="w-4 h-4 text-ink-muted" />
+        <h2 className="text-sm font-semibold text-ink">Change Password</h2>
+      </div>
+      <p className="text-xs text-ink-muted -mt-2">
+        This is a demo — password changes are simulated and not persisted to a real account.
+      </p>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-medium text-ink-muted block mb-1">Current Password</label>
+          <input
+            type="password"
+            required
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-ink-muted block mb-1">New Password</label>
+          <input
+            type="password"
+            required
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-ink-muted block mb-1">Confirm New Password</label>
+          <input
+            type="password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
+          />
+        </div>
+
+        <div className="sm:col-span-3 flex items-center justify-end gap-3">
+          {error && <span className="text-xs text-status-danger mr-auto">{error}</span>}
+          <SavedBadge show={saved} />
+          <button
+            type="submit"
+            disabled={saving}
+            className={cn(
+              "px-4 py-1.5 rounded-md text-sm font-medium bg-accent text-white cursor-pointer",
+              saving && "opacity-60 cursor-not-allowed"
+            )}
+          >
+            {saving ? "Updating..." : "Update Password"}
+          </button>
+        </div>
+      </form>
     </Card>
   );
 }
@@ -281,16 +399,17 @@ function DeveloperSection() {
         >
           Apply
         </button>
-      </div>2
+      </div>
     </Card>
   );
 }
 
 export default function SettingsPage() {
   return (
-    <div className="p-4 md:p-6 space-y-6 max-full">
+    <div className="p-4 md:p-6 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-semibold text-ink">Settings</h1>
       <ProfileSection />
+      <ChangePasswordSection />
       <AppearanceSection />
       <NotificationsSection />
       <DeveloperSection />

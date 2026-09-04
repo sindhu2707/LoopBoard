@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Task, TaskStatus, TaskPriority, Project } from "@/types";
-import { TeamMember } from "@/lib/mock-data";
+import { Task, TaskStatus, TaskPriority, Project, TeamMember } from "@/types";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
