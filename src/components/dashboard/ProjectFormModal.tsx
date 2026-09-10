@@ -9,7 +9,7 @@ export interface ProjectFormValues {
   name: string;
   description: string;
   status: ProjectStatus;
-  members: string[];
+  memberIds: string[];
   dueDate: string;
 }
 
@@ -36,7 +36,7 @@ export function ProjectFormModal({ open, onClose, onSubmit, members, submitting 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("on-track");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState(todayIso());
 
   useEffect(() => {
@@ -49,16 +49,16 @@ export function ProjectFormModal({ open, onClose, onSubmit, members, submitting 
 
   if (!open) return null;
 
-  function toggleMember(name: string) {
-    setSelectedMembers((prev) =>
-      prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name]
+  function toggleMember(id: string) {
+    setSelectedMemberIds((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
     );
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), description: description.trim(), status, members: selectedMembers, dueDate });
+    onSubmit({ name: name.trim(), description: description.trim(), status, memberIds: selectedMemberIds, dueDate });
   }
 
   return (
@@ -127,12 +127,12 @@ export function ProjectFormModal({ open, onClose, onSubmit, members, submitting 
             <label className="text-xs font-medium text-ink-muted block mb-1">Team Members</label>
             <div className="flex flex-wrap gap-2">
               {members.map((m) => {
-                const active = selectedMembers.includes(m.name);
+                const active = selectedMemberIds.includes(m.id);
                 return (
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => toggleMember(m.name)}
+                    onClick={() => toggleMember(m.id)}
                     className={cn(
                       "px-3 py-1.5 rounded-pill text-xs border cursor-pointer transition-colors",
                       active

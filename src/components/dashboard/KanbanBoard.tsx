@@ -14,12 +14,12 @@ import {
 } from "@dnd-kit/core";
 import { Task, TaskStatus } from "@/types";
 import { TaskCard } from "@/components/dashboard/TaskCard";
-import { updateTaskStatus } from "@/lib/mock-data";
+import { updateTaskStatus } from "@/lib/api/tasks";
 import { cn } from "@/lib/utils";
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "todo", label: "To Do" },
-  { status: "in-progress", label: "In Progress" },
+  { status: "in-progress", label: "In Progress" },  
   { status: "review", label: "In Review" },
   { status: "done", label: "Done" },
 ];

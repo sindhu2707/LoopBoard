@@ -5,12 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Project, Task, TeamMember } from "@/types";
 import {
   fetchProjectById,
-  fetchProjectTasks,
   fetchProjectMembers,
-  createTask,
-  updateTask,
-  deleteTask,
-} from "@/lib/mock-data";
+} from "@/lib/api/projects";
+import { fetchProjectTasks, createTask, updateTask, deleteTask } from "@/lib/api/tasks";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -20,8 +17,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { TaskCard } from "@/components/dashboard/TaskCard";
 import { TaskCardSkeleton } from "@/components/dashboard/TaskCardSkeleton";
 import { TaskFormModal, TaskFormValues } from "@/components/dashboard/TaskFormModal";
-import { ArrowLeft, CalendarDays, ListChecks, FolderX, Plus } from "lucide-react";
+import { ArrowLeft, CalendarDays, ListChecks, FolderX, Plus, Sparkles } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { generateTaskSuggestions, AITaskSuggestion } from "@/lib/api/ai";
+import { AITaskSuggestionsModal } from "@/components/dashboard/AITaskSuggestionsModal";
 
 const STATUS_CONFIG: Record<Project["status"], { label: string; badge: "success" | "warning" | "danger" | "info"; bar: "success" | "warning" | "danger" | "info" }> = {
   "on-track": { label: "On Track", badge: "success", bar: "success" },
@@ -45,6 +44,11 @@ export default function ProjectDetailPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [savingTask, setSavingTask] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<AITaskSuggestion[]>([]);
+  const [aiSubmitting, setAiSubmitting] = useState(false);
 
   useEffect(() => {
     fetchProjectById(params.id).then(setProject);
@@ -53,7 +57,7 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     if (project) {
-      fetchProjectMembers(project.members).then(setMembers);
+      fetchProjectMembers(project.memberIds ?? []).then(setMembers);
     }
   }, [project]);
 
@@ -85,6 +89,49 @@ export default function ProjectDetailPage() {
       alert(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSavingTask(false);
+    }
+  }
+
+  async function handleGenerateWithAI() {
+    if (!project) return;
+    setAiModalOpen(true);
+    setAiLoading(true);
+    setAiError(null);
+    setAiSuggestions([]);
+    try {
+      const suggestions = await generateTaskSuggestions(project.id);
+      setAiSuggestions(suggestions);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Failed to generate suggestions");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function handleConfirmAiSuggestions(selected: AITaskSuggestion[]) {
+    if (!project) return;
+    setAiSubmitting(true);
+    try {
+      const created = await Promise.all(
+        selected.map((s) =>
+          createTask({
+            title: s.title,
+            status: "todo",
+            priority: s.priority,
+            projectId: project.id,
+            assigneeId: null,
+            dueDate: s.dueDate,
+          })
+        )
+      );
+      setTasks((prev) => (prev ? [...prev, ...created] : created));
+      const refreshed = await fetchProjectById(project.id);
+      setProject(refreshed);
+      setAiModalOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add tasks");
+    } finally {
+      setAiSubmitting(false);
     }
   }
 
@@ -199,14 +246,24 @@ export default function ProjectDetailPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-ink">Tasks</h2>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleGenerateWithAI}
+              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Generate with AI
+            </button>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Task
+            </button>
+          </div>
         </div>
         {tasks === null ? (
           <div className="space-y-2">
@@ -250,6 +307,16 @@ export default function ProjectDetailPage() {
         message="Delete this task? This can't be undone."
         onConfirm={confirmDeleteTask}
         onCancel={() => setTaskToDelete(null)}
+      />
+
+      <AITaskSuggestionsModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        loading={aiLoading}
+        error={aiError}
+        suggestions={aiSuggestions}
+        onConfirm={handleConfirmAiSuggestions}
+        submitting={aiSubmitting}
       />
     </div>
   );

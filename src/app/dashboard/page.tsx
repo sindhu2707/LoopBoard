@@ -8,12 +8,9 @@ import {
   ProjectStatus,
   ActivityEvent,
 } from "@/types";
-import {
-  fetchProjects,
-  fetchTasks,
-  fetchStats,
-  fetchActivity,
-} from "@/lib/mock-data";
+import { fetchProjects } from "@/lib/api/projects";
+import { fetchTasks } from "@/lib/api/tasks";
+import { fetchStats, fetchActivity } from "@/lib/api/dashboard";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { StatsRowSkeleton } from "@/components/dashboard/StatsRowSkeleton";

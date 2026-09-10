@@ -1,5 +1,5 @@
 import { Router } from "express"; 
-import { getAllProjects, getProjectById, createProject, updateProject, deleteProject } from "../data/store"; 
+import { getAllProjects, getProjectById, createProject, updateProject, deleteProject, logActivity } from "../data/store"; 
 import { createProjectSchema, updateProjectSchema } from "../schemas/project";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { NotFoundError, ValidationError } from "../errors/AppError";
@@ -30,6 +30,12 @@ router.post("/", asyncHandler(async (req, res) => {
     }
 
     const newProject = await createProject(result.data);
+
+    await logActivity({
+        actor: req.userName!,
+        action: "created",
+        target: newProject!.name,
+    });
 
     res.status(201).json(newProject);
 }));

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchTeamMembers } from "@/lib/mock-data";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Users } from "lucide-react";
 import { TeamMember } from "@/types";
+import { fetchTeamMembers } from "@/lib/api/team";
 
 function TeamMemberCardSkeleton() {
   return (

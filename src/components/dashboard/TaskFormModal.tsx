@@ -9,7 +9,7 @@ export interface TaskFormValues {
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assignee: string;
+  assigneeId: string | null;
   dueDate: string;
   projectId?: string;
 }
@@ -53,7 +53,7 @@ export function TaskFormModal({
   const [title, setTitle] = useState(initialTask?.title ?? "");
   const [status, setStatus] = useState<TaskStatus>(initialTask?.status ?? "todo");
   const [priority, setPriority] = useState<TaskPriority>(initialTask?.priority ?? "medium");
-  const [assignee, setAssignee] = useState(initialTask?.assignee ?? members[0]?.name ?? "");
+  const [assigneeId, setAssigneeId] = useState(initialTask?.assigneeId ?? members[0]?.id ?? "");
   const [dueDate, setDueDate] = useState(initialTask?.dueDate?.slice(0, 10) ?? todayIso());
   const [projectId, setProjectId] = useState(initialTask?.projectId ?? projects[0]?.id ?? "");
 
@@ -71,13 +71,13 @@ export function TaskFormModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !assignee) return;
+    if (!title.trim() || !assigneeId) return;
     if (showProjectSelect && !projectId) return;
     onSubmit({
       title: title.trim(),
       status,
       priority,
-      assignee,
+      assigneeId,
       dueDate,
       projectId: initialTask ? initialTask.projectId : projectId,
     });
@@ -158,13 +158,13 @@ export function TaskFormModal({
             <label className="text-xs font-medium text-ink-muted block mb-1">Assignee</label>
             <select
               required
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
               className="w-full rounded-md border border-surface-border bg-surface px-3 py-2 text-sm text-ink outline-none focus-visible:border-accent"
             >
               {members.length === 0 && <option value="">No team members</option>}
               {members.map((m) => (
-                <option key={m.id} value={m.name}>{m.name} — {m.role}</option>
+                <option key={m.id} value={m.id}>{m.name} — {m.role}</option>
               ))}
             </select>
           </div>

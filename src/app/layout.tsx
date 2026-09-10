@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { AuthProvider } from "@/lib/auth/AuthContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -21,8 +22,10 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
-          <CommandPalette />
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <CommandPalette />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

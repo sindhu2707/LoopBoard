@@ -98,3 +98,14 @@ model Task {
 
   @@map("tasks")
 }
+
+model Activity {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  target    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@map("activities")
+}

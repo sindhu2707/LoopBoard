@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Project, TeamMember } from "@/types";
-import { fetchProjects, fetchTeamMembers, createProject } from "@/lib/mock-data";
+import { fetchProjects, createProject } from "@/lib/api/projects";
+import { fetchTeamMembers } from "@/lib/api/team";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectCardSkeleton } from "@/components/dashboard/ProjectCardSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";

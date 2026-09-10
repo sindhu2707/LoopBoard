@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/Badge";
+  import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Task, TaskStatus, TaskPriority } from "@/types";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
       >
         {formatDate(task.dueDate)}
       </span>
-      <Avatar name={task.assignee} size="sm" />
+      <Avatar name={task.assignee ?? "Unassigned"} size="sm" />
       {(onEdit || onDelete) && (
         <div className="flex items-center gap-1 shrink-0">
           {onEdit && (

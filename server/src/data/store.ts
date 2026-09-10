@@ -6,6 +6,7 @@ import {
   Project,
   User,
   TeamMember,
+  ActivityEvent
 } from "@shared/types";
 import { NotFoundError } from "../errors/AppError";
 
@@ -432,12 +433,69 @@ export async function deleteUser(id: string) {
   }
 }
 
-/**
- * Placeholder until Task 4 adds real session/JWT auth — returns the first
- * seeded user so existing consumers keep working. Replace with the
- * authenticated request's user once login exists.
- */
-export async function getCurrentUser() {
-  const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+export async function getUserByEmail(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
   return user ? serializeUser(user) : null;
+}
+
+// -----------------------------------------------------------------------
+// Activity
+// -----------------------------------------------------------------------
+
+function serializeActivity(event: {
+  id: string;
+  actor: string;
+  action: string;
+  target: string;
+  detail: string | null;
+  createdAt: Date;
+}): ActivityEvent {
+  return {
+    id: event.id,
+    actor: event.actor,
+    action: event.action as ActivityEvent["action"],
+    target: event.target,
+    detail: event.detail ?? undefined,
+    timestamp: event.createdAt.toISOString(),
+  };
+}
+
+export async function logActivity(data: {
+  actor: string;
+  action: ActivityEvent["action"];
+  target: string;
+  detail?: string;
+}) {
+  await prisma.activity.create  ({ data });
+}
+
+export async function getRecentActivity(limit = 20) {
+  const events = await prisma.activity.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return events.map(serializeActivity);
+}
+
+// -----------------------------------------------------------------------
+// Dashboard stats
+// -----------------------------------------------------------------------
+
+export async function getDashboardStats() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [activeProjects, tasksCompletedThisWeek, tasksOverdue, teamMembers] =
+    await Promise.all([
+      prisma.project.count({ where: { status: { not: "completed" } } }),
+      prisma.task.count({
+        where: { status: "done", updatedAt: { gte: weekAgo } },
+      }),
+      prisma.task.count({
+        where: { status: { not: "done" }, dueDate: { lt: now } },
+      }),
+      prisma.teamMember.count(),
+    ]);
+
+  return { activeProjects, tasksCompletedThisWeek, tasksOverdue, teamMembers };
 }

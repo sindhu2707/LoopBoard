@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Settings, LogOut } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { CURRENT_USER } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
 export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -28,6 +31,14 @@ export function ProfileMenu() {
     };
   }, []);
 
+  async function handleLogout() {
+    setOpen(false);
+    await logout();
+    router.push("/login");
+  }
+
+  if (!user) return null;
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -37,7 +48,7 @@ export function ProfileMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <Avatar name={CURRENT_USER.name} size="md" />
+        <Avatar name={user.name} size="md" />
       </button>
 
       {open && (
@@ -49,11 +60,11 @@ export function ProfileMenu() {
           )}
         >
           <div className="px-3 py-3 border-b border-surface-border mb-1 flex items-center gap-3">
-            <Avatar name={CURRENT_USER.name} size="md" />
+            <Avatar name={user.name} size="md" />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-ink truncate">{CURRENT_USER.name}</p>
-              <p className="text-xs text-ink-muted truncate">{CURRENT_USER.role}</p>
-              <p className="text-xs text-ink-faint truncate">{CURRENT_USER.email}</p>
+              <p className="text-sm font-medium text-ink truncate">{user.name}</p>
+              <p className="text-xs text-ink-muted truncate">{user.role}</p>
+              <p className="text-xs text-ink-faint truncate">{user.email}</p>
             </div>
           </div>
 
@@ -70,7 +81,7 @@ export function ProfileMenu() {
           <div className="border-t border-surface-border mt-1 pt-1">
             <button
               role="menuitem"
-              onClick={() => setOpen(false)}
+              onClick={handleLogout}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left text-status-danger hover:bg-status-danger/10 transition-colors"
             >
               <LogOut size={16} />

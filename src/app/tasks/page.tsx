@@ -3,14 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Task, TaskPriority, TaskStatus, Project, TeamMember } from "@/types";
-import {
-  fetchTasks,
-  fetchTeamMembers,
-  fetchProjects,
-  createTask,
-  updateTask,
-  deleteTask,
-} from "@/lib/mock-data";
+import { fetchTeamMembers } from "@/lib/api/team";
+import { fetchProjects } from "@/lib/api/projects";
+import { fetchTasks, createTask, updateTask, deleteTask } from "@/lib/api/tasks";
 import { TaskCard } from "@/components/dashboard/TaskCard";
 import { TaskCardSkeleton } from "@/components/dashboard/TaskCardSkeleton";
 import { KanbanBoard } from "@/components/dashboard/KanbanBoard";
@@ -77,7 +72,9 @@ function TasksContent() {
     if (searchInput.trim()) {
       const q = searchInput.toLowerCase();
       result = result.filter(
-        (t) => t.title.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          (t.assignee?.toLowerCase().includes(q) ?? false)
       );
     }
     if (priorityFilter !== "all") {
@@ -156,7 +153,7 @@ function TasksContent() {
           title: values.title,
           status: values.status,
           priority: values.priority,
-          assignee: values.assignee,
+          assigneeId: values.assigneeId,
           dueDate: values.dueDate,
           projectId: values.projectId,
         });
@@ -336,111 +333,111 @@ function TasksContent() {
         </div>
       )}
 
-        {view === "board" && !isFiltered ? (
-          tasks === null ? (
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-2 min-w-[280px] flex-1">
-                  <TaskCardSkeleton />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <KanbanBoard
-              key={`${searchInput}-${priorityFilter}`}
-              initialTasks={searchedAndFiltered ?? []}
-            />
-          )
-        ) : (
-          <div className="space-y-2">
-            {sorted === null ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => <TaskCardSkeleton key={i} />)}
+      {view === "board" && !isFiltered ? (
+        tasks === null ? (
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2 min-w-[280px] flex-1">
+                <TaskCardSkeleton />
               </div>
-            ) : sorted.length > 0 ? (
-              <>
-                <label className="flex items-center gap-2 text-xs text-ink-muted px-1">
+            ))}
+          </div>
+        ) : (
+          <KanbanBoard
+            key={`${searchInput}-${priorityFilter}`}
+            initialTasks={searchedAndFiltered ?? []}
+          />
+        )
+      ) : (
+        <div className="space-y-2">
+          {sorted === null ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <TaskCardSkeleton key={i} />)}
+            </div>
+          ) : sorted.length > 0 ? (
+            <>
+              <label className="flex items-center gap-2 text-xs text-ink-muted px-1">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === sorted.length}
+                  onChange={toggleSelectAll}
+                  className="cursor-pointer"
+                />
+                Select all
+              </label>
+              {sorted.map((t) => (
+                <div key={t.id} className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={selectedIds.size === sorted.length}
-                    onChange={toggleSelectAll}
-                    className="cursor-pointer"
+                    checked={selectedIds.has(t.id)}
+                    onChange={() => toggleSelect(t.id)}
+                    className="cursor-pointer shrink-0"
                   />
-                  Select all
-                </label>
-                {sorted.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(t.id)}
-                      onChange={() => toggleSelect(t.id)}
-                      className="cursor-pointer shrink-0"
+                  <div className="flex-1">
+                    <TaskCard
+                      task={t}
+                      onEdit={() => openEditModal(t)}
+                      onDelete={() => requestDeleteTask(t)}
                     />
-                    <div className="flex-1">
-                      <TaskCard
-                        task={t}
-                        onEdit={() => openEditModal(t)}
-                        onDelete={() => requestDeleteTask(t)}
-                      />
-                    </div>
                   </div>
-                ))}
-              </>
-            ) : (
-              <EmptyState
-                icon={ListChecks}
-                title="No tasks found"
-                description="Nothing matches this filter right now."
-              />
-            )}
-          </div>
-        )}
+                </div>
+              ))}
+            </>
+          ) : (
+            <EmptyState
+              icon={ListChecks}
+              title="No tasks found"
+              description="Nothing matches this filter right now."
+            />
+          )}
+        </div>
+      )}
 
-        <TaskFormModal
-          key={taskModalOpen ? (editingTask?.id ?? "new") : "closed"}
-          open={taskModalOpen}
-          onClose={() => setTaskModalOpen(false)}
-          onSubmit={handleTaskSubmit}
-          members={members ?? []}
-          projects={projects ?? []}
-          initialTask={editingTask}
-          submitting={savingTask}
-        />
-        {/* Single task delete */}
-        <ConfirmDialog
-          open={taskPendingDelete !== null}
-          title="Delete task?"
-          message={
-            taskPendingDelete
-              ? `"${taskPendingDelete.title}" will be permanently removed.`
-              : ""
-          }
-          confirmLabel="Yes, delete"
-          cancelLabel="No"
-          onConfirm={confirmDeleteTask}
-          onCancel={() => setTaskPendingDelete(null)}
-        />
+      <TaskFormModal
+        key={taskModalOpen ? (editingTask?.id ?? "new") : "closed"}
+        open={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        onSubmit={handleTaskSubmit}
+        members={members ?? []}
+        projects={projects ?? []}
+        initialTask={editingTask}
+        submitting={savingTask}
+      />
+      {/* Single task delete */}
+      <ConfirmDialog
+        open={taskPendingDelete !== null}
+        title="Delete task?"
+        message={
+          taskPendingDelete
+            ? `"${taskPendingDelete.title}" will be permanently removed.`
+            : ""
+        }
+        confirmLabel="Yes, delete"
+        cancelLabel="No"
+        onConfirm={confirmDeleteTask}
+        onCancel={() => setTaskPendingDelete(null)}
+      />
 
-        {/* Bulk delete */}
-        <ConfirmDialog
-          open={bulkDeleteConfirm}
-          title="Delete selected tasks?"
-          message={`${selectedIds.size} selected task${
-            selectedIds.size === 1 ? "" : "s"
-          } will be permanently removed.`}
-          confirmLabel="Yes, delete"
-          cancelLabel="No"
-          onConfirm={confirmBulkDeleteTasks}
-          onCancel={() => setBulkDeleteConfirm(false)}
-        />
-      </div>
-    );
-  }
+      {/* Bulk delete */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete selected tasks?"
+        message={`${selectedIds.size} selected task${
+          selectedIds.size === 1 ? "" : "s"
+        } will be permanently removed.`}
+        confirmLabel="Yes, delete"
+        cancelLabel="No"
+        onConfirm={confirmBulkDeleteTasks}
+        onCancel={() => setBulkDeleteConfirm(false)}
+      />
+    </div>
+  );
+}
 
-  export default function TasksPage() {
-    return (
-      <Suspense fallback={null}>
-        <TasksContent />
-      </Suspense>
-    );
-  }
+export default function TasksPage() {
+  return (
+    <Suspense fallback={null}>
+      <TasksContent />
+    </Suspense>
+  );
+}
