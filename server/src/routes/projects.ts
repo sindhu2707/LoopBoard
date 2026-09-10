@@ -5,12 +5,12 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { NotFoundError, ValidationError } from "../errors/AppError";
 
 const router = Router(); 
-router.get("/", (req, res) => { 
-    res.json(getAllProjects()); 
-}); 
+router.get("/", asyncHandler(async (req, res) => {
+    res.json(await getAllProjects());
+})); 
 
 router.get("/:id", asyncHandler(async (req, res) => {
-    const project = getProjectById(String(req.params.id));
+    const project = await getProjectById(String(req.params.id));
 
     if (!project) {
         throw new NotFoundError("Project not found");
@@ -29,7 +29,7 @@ router.post("/", asyncHandler(async (req, res) => {
         );
     }
 
-    const newProject = createProject(result.data);
+    const newProject = await createProject(result.data);
 
     res.status(201).json(newProject);
 }));
@@ -44,7 +44,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
         );
     }
 
-    const project = updateProject(
+    const project = await updateProject(
         String(req.params.id),
         result.data
     );
@@ -57,7 +57,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
 }));
 
 router.delete("/:id", asyncHandler(async (req, res) => {
-    const deleted = deleteProject(String(req.params.id));
+    const deleted = await deleteProject(String(req.params.id));
 
     if (!deleted) {
         throw new NotFoundError("Project not found");
@@ -66,4 +66,4 @@ router.delete("/:id", asyncHandler(async (req, res) => {
     res.status(204).send();
 }));
 
-export default router; 
+export default router;

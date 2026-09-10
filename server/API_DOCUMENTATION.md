@@ -73,17 +73,18 @@ Returns `204` on success, `404` if the user doesn't exist.
 ## Projects
 
 ### `GET /api/projects`
-Returns all projects.
+Returns all projects. `taskCount`/`completedTaskCount` are computed live from related tasks, not stored counters.
 
 **Response `200`**
 ```json
 [
   {
-    "id": "p1",
+    "id": "clx1a2b3c",
     "name": "Design System v2",
     "description": "Unify tokens and components across product surfaces.",
     "status": "on-track",
     "progress": 72,
+    "memberIds": ["clx9m1", "clx9m2", "clx9m3"],
     "members": ["Sarah Patel", "Alex Kim", "Jo Chen"],
     "taskCount": 24,
     "completedTaskCount": 17,
@@ -91,6 +92,7 @@ Returns all projects.
   }
 ]
 ```
+`members` (names) is resolved server-side from `memberIds` and included for convenience — write requests should send `memberIds`, not `members`.
 
 ### `GET /api/projects/:id`
 Single project by id, or `404`.
@@ -103,19 +105,19 @@ Single project by id, or `404`.
   "description": "Short description.",
   "status": "on-track",
   "progress": 0,
-  "members": ["Sarah Patel"],
+  "memberIds": ["clx9m1"],
   "dueDate": "2026-12-01"
 }
 ```
-`status` must be one of: `on-track`, `at-risk`, `delayed`, `completed`.
+`status` must be one of: `on-track`, `at-risk`, `delayed`, `completed`. `memberIds` must reference existing team members (`GET /api/team` for ids) — an unknown id returns `404`.
 
 **Response `201`** — created project object.
 
 ### `PATCH /api/projects/:id`
-Partial update of any field above.
+Partial update of any field above. Sending `memberIds` replaces the full membership list (not a merge).
 
 ### `DELETE /api/projects/:id`
-Returns `204` on success, `404` if not found.
+Returns `204` on success, `404` if not found. Deleting a project also deletes its tasks (cascade).
 
 ---
 
@@ -128,16 +130,18 @@ Returns all tasks.
 ```json
 [
   {
-    "id": "t1",
+    "id": "clx1t1",
     "title": "Finalize color token naming",
     "status": "in-progress",
     "priority": "high",
-    "projectId": "p1",
+    "projectId": "clx1a2b3c",
+    "assigneeId": "clx9m1",
     "assignee": "Sarah Patel",
     "dueDate": "2026-08-25"
   }
 ]
 ```
+`assignee` (name) is resolved server-side from `assigneeId` and included for convenience — write requests should send `assigneeId`, not `assignee`. `assigneeId` is `null` for unassigned tasks.
 
 ### `GET /api/tasks/:id`
 Single task by id, or `404`.
@@ -149,18 +153,19 @@ Single task by id, or `404`.
   "title": "Write release notes",
   "status": "todo",
   "priority": "medium",
-  "projectId": "p1",
-  "assignee": "Alex Kim",
+  "projectId": "clx1a2b3c",
+  "assigneeId": "clx9m2",
   "dueDate": "2026-09-10"
 }
 ```
 `status` must be one of: `todo`, `in-progress`, `review`, `done`.
 `priority` must be one of: `low`, `medium`, `high`.
+`projectId` must reference an existing project; `assigneeId` (optional) must reference an existing team member — either returns `404` if not found.
 
 **Response `201`** — created task object.
 
 ### `PATCH /api/tasks/:id`
-Partial update — commonly used for status changes, e.g. `{ "status": "done" }`.
+Partial update — commonly used for status changes, e.g. `{ "status": "done" }`. Send `"assigneeId": null` to unassign a task.
 
 ### `DELETE /api/tasks/:id`
 Returns `204` on success, `404` if not found.

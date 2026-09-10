@@ -1,191 +1,443 @@
-import { Task, Project, User, TeamMember } from "@shared/types";
-import bcrypt from "bcrypt"; 
+import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../lib/prisma";
+import {
+  Task,
+  Project,
+  User,
+  TeamMember,
+} from "@shared/types";
+import { NotFoundError } from "../errors/AppError";
 
-export let PROJECTS: Project[] = [
-  { id: "p1", name: "Design System v2", description: "Unify tokens and components across product surfaces.", status: "on-track", progress: 72, members: ["Sarah Patel", "Alex Kim", "Jo Chen"], taskCount: 24, completedTaskCount: 17, dueDate: "2026-09-15" },
-  { id: "p2", name: "API Gateway Migration", description: "Move legacy REST endpoints to the new gateway.", status: "at-risk", progress: 41, members: ["Max Lee", "Priya Rao"], taskCount: 18, completedTaskCount: 7, dueDate: "2026-09-01" },
-  { id: "p3", name: "Mobile Onboarding Revamp", description: "Redesign first-run experience for iOS and Android.", status: "delayed", progress: 25, members: ["Jo Chen", "Sarah Patel", "Max Lee", "Priya Rao"], taskCount: 30, completedTaskCount: 6, dueDate: "2026-08-30" },
-  { id: "p4", name: "Analytics Pipeline", description: "Event tracking and dashboarding for product usage.", status: "completed", progress: 100, members: ["Alex Kim"], taskCount: 14, completedTaskCount: 14, dueDate: "2026-08-10" },
-];
+// -----------------------------------------------------------------------
+// Shared helpers
+// -----------------------------------------------------------------------
 
-export let TASKS: Task[] = [
-  { id: "t1", title: "Finalize color token naming", status: "in-progress", priority: "high", projectId: "p1", assignee: "Sarah Patel", dueDate: "2026-08-25" },
-  { id: "t2", title: "Audit legacy auth endpoints", status: "todo", priority: "high", projectId: "p2", assignee: "Max Lee", dueDate: "2026-08-24" },
-  { id: "t3", title: "Write on boarding copy v2", status: "review", priority: "medium", projectId: "p3", assignee: "Jo Chen", dueDate: "2026-08-27" },
-  { id: "t4", title: "Set up rate limiting", status: "todo", priority: "high", projectId: "p2", assignee: "Priya Rao", dueDate: "2026-08-26" },
-  { id: "t5", title: "Component docs pass", status: "done", priority: "low", projectId: "p1", assignee: "Alex Kim", dueDate: "2026-08-20" },
-  { id: "t6", title: "Prototype swipe gestures", status: "in-progress", priority: "medium", projectId: "p3", assignee: "Sarah Patel", dueDate: "2026-08-29" },
-];
-
-export let TEAM_MEMBERS: TeamMember[] = [
-  { id: "m1", name: "Sarah Patel", role: "Frontend Engineer", email: "sarah@xyz.com" },
-  { id: "m2", name: "Alex Kim", role: "Product Designer", email: "alex@xyz.com" },
-  { id: "m3", name: "Jo Chen", role: "Backend Engineer", email: "joe@xyz.com" },
-  { id: "m4", name: "Max Lee", role: "Full-stack Engineer", email: "max@xyz.com" },
-];
-
-export let USERS: User[] = [
-  {
-    id: "u1",
-    name: "Sarah Patel",
-    role: "Frontend Engineer",
-    email: "sarah@xyz.com",
-    password: "password123", // mock only — for demo change-password validation
-  },
-];
-
-export const CURRENT_USER = USERS[0];
-
-export function getAllTasks() { 
-  return TASKS; 
-} 
-  
-export function getTaskById(id: string) { 
-  return TASKS.find(t => t.id === id); 
+/** date-only fields ("2026-09-15") round-trip cleanly through Postgres `date` columns */
+function toDateOnly(value: string): Date {
+  return new Date(`${value}T00:00:00.000Z`);
 }
 
-export function createTask(data: Omit<Task, "id">) {
-  const newTask: Task = {
-    id: `t${Date.now()}`,
-    ...data
+function fromDateOnly(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+/**
+ * Prisma throws typed errors for constraint violations. We translate the
+ * ones our routes care about into the same AppError subclasses the routes
+ * already know how to handle, so a bad `projectId`/`assigneeId` on write
+ * comes back as a clean 404 instead of a raw 500.
+ */
+function translatePrismaError(err: unknown): never {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2025") {
+      throw new NotFoundError("Resource not found");
+    }
+    if (err.code === "P2003") {
+      throw new NotFoundError(
+        "Referenced project or team member does not exist"
+      );
+    }
+  }
+  throw err;
+}
+
+// -----------------------------------------------------------------------
+// Tasks
+// -----------------------------------------------------------------------
+
+type TaskWithAssignee = Prisma.TaskGetPayload<{
+  include: { assignee: true };
+}>;
+
+function serializeTask(task: TaskWithAssignee): Task {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status as Task["status"],
+    priority: task.priority as Task["priority"],
+    projectId: task.projectId,
+    assigneeId: task.assigneeId,
+    assignee: task.assignee?.name ?? null,
+    dueDate: fromDateOnly(task.dueDate),
   };
-
-  TASKS.push(newTask);
-  return newTask;
 }
 
-export function updateTask(id: string, updates: Partial<Task>) {
-  const task = TASKS.find(t => t.id === id);
-
-  if (!task) return null;
-
-  Object.assign(task, updates);
-  return task;
+export async function getAllTasks() {
+  const tasks = await prisma.task.findMany({
+    include: { assignee: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return tasks.map(serializeTask);
 }
 
-export function deleteTask(id: string) {
-  const index = TASKS.findIndex(t => t.id === id);
-
-  if (index === -1) return false;
-
-  TASKS.splice(index, 1);
-  return true;
+export async function getTaskById(id: string) {
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { assignee: true },
+  });
+  return task ? serializeTask(task) : null;
 }
 
-export function getAllProjects() {
-  return PROJECTS;
+export async function createTask(data: Omit<Task, "id" | "assignee">) {
+  try {
+    const task = await prisma.task.create({
+      data: {
+        title: data.title,
+        status: data.status,
+        priority: data.priority,
+        dueDate: toDateOnly(data.dueDate),
+        project: { connect: { id: data.projectId } },
+        ...(data.assigneeId
+          ? { assignee: { connect: { id: data.assigneeId } } }
+          : {}),
+      },
+      include: { assignee: true },
+    });
+    return serializeTask(task);
+  } catch (err) {
+    translatePrismaError(err);
+  }
 }
 
-export function getProjectById(id: string) {
-  return PROJECTS.find(p => p.id === id);
-}
-
-export function createProject(
-  data: Omit<Project, "id" | "taskCount" | "completedTaskCount">
+export async function updateTask(
+  id: string,
+  updates: Partial<Omit<Task, "id" | "assignee">>
 ) {
-  const newProject: Project = {
-    id: `p${Date.now()}`,
-    ...data,
-    taskCount: 0,
-    completedTaskCount: 0
+  try {
+    const { projectId, assigneeId, dueDate, ...rest } = updates;
+
+    const task = await prisma.task.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(dueDate ? { dueDate: toDateOnly(dueDate) } : {}),
+        ...(projectId ? { project: { connect: { id: projectId } } } : {}),
+        ...(assigneeId !== undefined
+          ? assigneeId
+            ? { assignee: { connect: { id: assigneeId } } }
+            : { assignee: { disconnect: true } }
+          : {}),
+      },
+      include: { assignee: true },
+    });
+    return serializeTask(task);
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return null;
+    }
+    translatePrismaError(err);
+  }
+}
+
+export async function deleteTask(id: string) {
+  try {
+    await prisma.task.delete({ where: { id } });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+// -----------------------------------------------------------------------
+// Projects
+// -----------------------------------------------------------------------
+
+type ProjectWithRelations = Prisma.ProjectGetPayload<{
+  include: {
+    memberLinks: { include: { teamMember: true } };
+    tasks: { select: { status: true } };
   };
+}>;
 
-  PROJECTS.push(newProject);
-  return newProject;
-}
-
-export function updateProject(id: string, updates: Partial<Project>) {
-  const project = PROJECTS.find(p => p.id === id);
-
-  if (!project) return null;
-
-  Object.assign(project, updates);
-  return project;
-}
-
-export function deleteProject(id: string) {
-  const index = PROJECTS.findIndex(p => p.id === id);
-
-  if (index === -1) return false;
-
-  PROJECTS.splice(index, 1);
-  return true;
-}
-
-export function getAllTeamMembers() {
-  return TEAM_MEMBERS;
-}
-
-export function getTeamMemberById(id: string) {
-  return TEAM_MEMBERS.find(m => m.id === id);
-}
-
-export function createTeamMember(data: Omit<TeamMember, "id">) {
-  const newTeamMember: TeamMember = {
-    id: `m${Date.now()}`,
-    ...data
+function serializeProject(project: ProjectWithRelations): Project {
+  const members = project.memberLinks.map((link) => link.teamMember);
+  return {
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    status: project.status as Project["status"],
+    progress: project.progress,
+    memberIds: members.map((m) => m.id),
+    members: members.map((m) => m.name),
+    taskCount: project.tasks.length,
+    completedTaskCount: project.tasks.filter((t) => t.status === "done")
+      .length,
+    dueDate: fromDateOnly(project.dueDate),
   };
-
-  TEAM_MEMBERS.push(newTeamMember);
-  return newTeamMember;
 }
 
-export function updateTeamMember(
+const projectInclude = {
+  memberLinks: { include: { teamMember: true } },
+  tasks: { select: { status: true } },
+} satisfies Prisma.ProjectInclude;
+
+export async function getAllProjects() {
+  const projects = await prisma.project.findMany({
+    include: projectInclude,
+    orderBy: { createdAt: "asc" },
+  });
+  return projects.map(serializeProject);
+}
+
+export async function getProjectById(id: string) {
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: projectInclude,
+  });
+  return project ? serializeProject(project) : null;
+}
+
+export async function createProject(
+  data: Omit<Project, "id" | "taskCount" | "completedTaskCount" | "members">
+) {
+  try {
+    const project = await prisma.project.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        progress: data.progress,
+        dueDate: toDateOnly(data.dueDate),
+        memberLinks: {
+          create: (data.memberIds ?? []).map((teamMemberId) => ({
+            teamMember: { connect: { id: teamMemberId } },
+          })),
+        },
+      },
+      include: projectInclude,
+    });
+    return serializeProject(project);
+  } catch (err) {
+    translatePrismaError(err);
+  }
+}
+
+export async function updateProject(
+  id: string,
+  updates: Partial<
+    Omit<Project, "id" | "taskCount" | "completedTaskCount" | "members">
+  >
+) {
+  try {
+    const { memberIds, dueDate, ...rest } = updates;
+
+    const project = await prisma.project.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(dueDate ? { dueDate: toDateOnly(dueDate) } : {}),
+        ...(memberIds
+          ? {
+              memberLinks: {
+                deleteMany: {},
+                create: memberIds.map((teamMemberId) => ({
+                  teamMember: { connect: { id: teamMemberId } },
+                })),
+              },
+            }
+          : {}),
+      },
+      include: projectInclude,
+    });
+    return serializeProject(project);
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return null;
+    }
+    translatePrismaError(err);
+  }
+}
+
+export async function deleteProject(id: string) {
+  try {
+    await prisma.project.delete({ where: { id } });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+// -----------------------------------------------------------------------
+// Team members
+// -----------------------------------------------------------------------
+
+function serializeTeamMember(member: {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+}): TeamMember {
+  return {
+    id: member.id,
+    name: member.name,
+    role: member.role,
+    email: member.email,
+  };
+}
+
+export async function getAllTeamMembers() {
+  const members = await prisma.teamMember.findMany({
+    orderBy: { createdAt: "asc" },
+  });
+  return members.map(serializeTeamMember);
+}
+
+export async function getTeamMemberById(id: string) {
+  const member = await prisma.teamMember.findUnique({ where: { id } });
+  return member ? serializeTeamMember(member) : null;
+}
+
+export async function createTeamMember(data: Omit<TeamMember, "id">) {
+  try {
+    const member = await prisma.teamMember.create({ data });
+    return serializeTeamMember(member);
+  } catch (err) {
+    translatePrismaError(err);
+  }
+}
+
+export async function updateTeamMember(
   id: string,
   updates: Partial<TeamMember>
 ) {
-  const teamMember = TEAM_MEMBERS.find(m => m.id === id);
-
-  if (!teamMember) return null;
-
-  Object.assign(teamMember, updates);
-  return teamMember;
+  try {
+    const member = await prisma.teamMember.update({
+      where: { id },
+      data: updates,
+    });
+    return serializeTeamMember(member);
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return null;
+    }
+    translatePrismaError(err);
+  }
 }
 
-export function deleteTeamMember(id: string) {
-  const index = TEAM_MEMBERS.findIndex(m => m.id === id);
-
-  if (index === -1) return false;
-
-  TEAM_MEMBERS.splice(index, 1);
-  return true;
+export async function deleteTeamMember(id: string) {
+  try {
+    await prisma.teamMember.delete({ where: { id } });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return false;
+    }
+    throw err;
+  }
 }
 
-export function getAllUsers() {
-  return USERS;
+// -----------------------------------------------------------------------
+// Users
+// -----------------------------------------------------------------------
+
+function serializeUser(user: {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  password: string;
+  avatarInitials: string | null;
+}): User {
+  return {
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    email: user.email,
+    password: user.password,
+    avatarInitials: user.avatarInitials ?? undefined,
+  };
 }
 
-export function getUserById(id: string) {
-  return USERS.find((u) => u.id === id);
+export async function getAllUsers() {
+  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  return users.map(serializeUser);
 }
 
-export async function createUser( data: Omit<User, "id"> ) { 
-  if (!data.password) { 
-    throw new Error("Password is required"); 
-  } const hashedPassword = await bcrypt.hash(data.password, 10); 
-  const newUser: User = { 
-    id: `u${Date.now()}`, ...data, 
-    password: hashedPassword, 
-  }; 
-  USERS.push(newUser); 
-  return newUser; 
-} 
-
-export async function updateUser(id: string, updates: Partial<User>) { 
-  const user = USERS.find(u => u.id === id); 
-  if (!user) return null; 
-  if (updates.password) { 
-    updates.password = await bcrypt.hash(updates.password, 10); 
-  } 
-  Object.assign(user, updates); 
-  return user; 
+export async function getUserById(id: string) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  return user ? serializeUser(user) : null;
 }
 
-export function deleteUser(id: string) {
-  const index = USERS.findIndex((u) => u.id === id);
+export async function createUser(data: Omit<User, "id">) {
+  if (!data.password) {
+    throw new Error("Password is required");
+  }
+  const hashedPassword = await bcrypt.hash(data.password, 10);
+  try {
+    const user = await prisma.user.create({
+      data: { ...data, password: hashedPassword },
+    });
+    return serializeUser(user);
+  } catch (err) {
+    translatePrismaError(err);
+  }
+}
 
-  if (index === -1) return false;
+export async function updateUser(id: string, updates: Partial<User>) {
+  const data = { ...updates };
+  if (data.password) {
+    data.password = await bcrypt.hash(data.password, 10);
+  }
+  try {
+    const user = await prisma.user.update({ where: { id }, data });
+    return serializeUser(user);
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return null;
+    }
+    translatePrismaError(err);
+  }
+}
 
-  USERS.splice(index, 1);
-  return true;
+export async function deleteUser(id: string) {
+  try {
+    await prisma.user.delete({ where: { id } });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return false;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Placeholder until Task 4 adds real session/JWT auth — returns the first
+ * seeded user so existing consumers keep working. Replace with the
+ * authenticated request's user once login exists.
+ */
+export async function getCurrentUser() {
+  const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+  return user ? serializeUser(user) : null;
 }

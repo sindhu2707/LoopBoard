@@ -4,12 +4,14 @@ import { createTeamMemberSchema, updateTeamMemberSchema } from "../schemas/teamM
 import { asyncHandler } from "../middleware/asyncHandler";
 import { NotFoundError, ValidationError } from "../errors/AppError";
 
-const router = Router(); router.get("/", (req, res) => { 
-    res.json(getAllTeamMembers()); 
-}); 
+const router = Router();
+
+router.get("/", asyncHandler(async (req, res) => {
+    res.json(await getAllTeamMembers());
+}));
 
 router.get("/:id", asyncHandler(async (req, res) => {
-    const member = getTeamMemberById(String(req.params.id));
+    const member = await getTeamMemberById(String(req.params.id));
 
     if (!member) {
         throw new NotFoundError("Team member not found");
@@ -28,7 +30,7 @@ router.post("/", asyncHandler(async (req, res) => {
         );
     }
 
-    const newMember = createTeamMember(result.data);
+    const newMember = await createTeamMember(result.data);
 
     res.status(201).json(newMember);
 }));
@@ -43,7 +45,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
         );
     }
 
-    const member = updateTeamMember(
+    const member = await updateTeamMember(
         String(req.params.id),
         result.data
     );
@@ -56,7 +58,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
 }));
 
 router.delete("/:id", asyncHandler(async (req, res) => {
-    const deleted = deleteTeamMember(String(req.params.id));
+    const deleted = await deleteTeamMember(String(req.params.id));
 
     if (!deleted) {
         throw new NotFoundError("Team member not found");

@@ -6,12 +6,12 @@ import { NotFoundError, ValidationError } from "../errors/AppError";
 
 const router = Router(); 
 
-router.get("/", (req, res) => { 
-    res.json(getAllTasks()); 
-});
+router.get("/", asyncHandler(async (req, res) => {
+    res.json(await getAllTasks());
+}));
 
 router.get("/:id", asyncHandler(async (req, res) => {
-    const task = getTaskById(String(req.params.id));
+    const task = await getTaskById(String(req.params.id));
 
     if (!task) {
         throw new NotFoundError("Task not found");
@@ -30,7 +30,7 @@ router.post("/", asyncHandler(async (req, res) => {
         );
     }
 
-    const newTask = createTask(result.data);
+    const newTask = await createTask(result.data);
 
     res.status(201).json(newTask);
 }));
@@ -45,7 +45,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
         );
     }
 
-    const task = updateTask(
+    const task = await updateTask(
         String(req.params.id),
         result.data
     );
@@ -58,7 +58,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
 }));
 
 router.delete("/:id", asyncHandler(async (req, res) => {
-    const deleted = deleteTask(String(req.params.id));
+    const deleted = await deleteTask(String(req.params.id));
 
     if (!deleted) {
         throw new NotFoundError("Task not found");

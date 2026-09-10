@@ -1,0 +1,100 @@
+// LoopBoard — Prisma schema (Task 3: Database Integration)
+//
+// Design notes:
+// - `Task.assigneeId` and `ProjectMember` are real foreign-key relations,
+//   replacing the loose name-matching strings used in the old in-memory store.
+// - `status` / `priority` / `role` stay as `String` columns (not native Postgres
+//   enums) because the values still need to match the exact hyphenated strings
+//   the frontend already expects (e.g. "in-progress", "at-risk"). They're
+//   validated at three layers: Zod at the API boundary, a Postgres CHECK
+//   constraint added in the migration (see prisma/migrations), and the
+//   foreign keys below for referential integrity.
+// - `onDelete: Cascade` on Task -> Project means deleting a project cleans up
+//   its tasks automatically. `onDelete: SetNull` on Task -> TeamMember means
+//   removing a team member un-assigns their tasks instead of deleting them.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  password       String
+  role           String
+  avatarInitials String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("users")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedTasks Task[]          @relation("TaskAssignee")
+  projectLinks  ProjectMember[]
+
+  @@map("team_members")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  status      String // on-track | at-risk | delayed | completed
+  progress    Int      @default(0)
+  dueDate     DateTime @db.Date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       Task[]
+  memberLinks ProjectMember[]
+
+  @@map("projects")
+}
+
+// Explicit join table for the Project <-> TeamMember many-to-many relation.
+// Modeled explicitly (rather than an implicit Prisma m-n table) so it's
+// visible in the schema and easy to query/extend (e.g. add a `role` per
+// project later).
+model ProjectMember {
+  projectId    String
+  teamMemberId String
+  createdAt    DateTime @default(now())
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, teamMemberId])
+  @@map("project_members")
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  title     String
+  status    String // todo | in-progress | review | done
+  priority  String // low | medium | high
+  dueDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assigneeId String?
+  assignee   TeamMember? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@map("tasks")
+}

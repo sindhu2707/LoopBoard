@@ -18,7 +18,10 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   projectId: string;
-  assignee: string;
+  /** FK to TeamMember.id — the source of truth for who owns this task. */
+  assigneeId?: string | null;
+  /** Resolved from `assigneeId` server-side; kept for existing frontend compatibility. */
+  assignee: string | null;
   dueDate: string;
 }
 
@@ -28,6 +31,9 @@ export interface Project {
   description: string;
   status: ProjectStatus;
   progress: number;
+  /** FKs to TeamMember.id via the ProjectMember join table — the source of truth. */
+  memberIds?: string[];
+  /** Resolved from `memberIds` server-side; kept for existing frontend compatibility. */
   members: string[];
   taskCount: number;
   completedTaskCount: number;

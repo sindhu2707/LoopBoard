@@ -13,11 +13,11 @@ function toSafeUser(user: User) {
 const router = Router(); 
 
 router.get("/", asyncHandler(async (req, res) => { 
-    res.json(getAllUsers().map(toSafeUser)); 
+    res.json((await getAllUsers()).map(toSafeUser)); 
 })); 
 
 router.get("/:id", asyncHandler(async (req, res) => { 
-    const user = getUserById(String(req.params.id)); 
+    const user = await getUserById(String(req.params.id)); 
     if (!user) throw new NotFoundError("User not found"); 
     res.json(toSafeUser(user));
 })); 
@@ -38,7 +38,7 @@ router.patch("/:id", asyncHandler(async (req, res) => {
 })); 
 
 router.delete("/:id", asyncHandler(async (req, res) => { 
-    const success = deleteUser(String(req.params.id)); 
+    const success = await deleteUser(String(req.params.id)); 
     if (!success) throw new NotFoundError("User not found"); 
     res.status(204).send(); 
 })); 
