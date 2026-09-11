@@ -32,8 +32,13 @@ function ProjectsContent() {
 
   async function handleCreate(values: ProjectFormValues) {
     setSaving(true);
+
     try {
-      const created = await createProject(values);
+      const created = await createProject({
+        ...values,
+        progress: 0,
+      });
+
       setProjects((prev) => (prev ? [...prev, created] : [created]));
       setModalOpen(false);
     } catch (err) {
@@ -42,6 +47,7 @@ function ProjectsContent() {
       setSaving(false);
     }
   }
+
 
   return (
     <div className="p-4 md:p-6 space-y-6">

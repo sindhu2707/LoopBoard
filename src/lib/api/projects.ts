@@ -6,7 +6,7 @@ export interface CreateProjectInput {
   name: string;
   description: string;
   status: ProjectStatus;
-  progress: number;
+  progress?: number;
   memberIds: string[];
   dueDate: string;
 }
